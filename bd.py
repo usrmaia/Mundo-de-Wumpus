@@ -32,7 +32,7 @@ class BD:
         tabela = self.retornarQuery(self, query)
         conhecimento = []
 
-        for atomo in tabela:
+        for atomo in tabela: 
             if atomo[0]: conhecimento.append(atomo[0])
 
         return conhecimento

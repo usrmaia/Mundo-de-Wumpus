@@ -1,15 +1,15 @@
 class Atuador():
-  def __init__(self, BD, Pilha, InfoDoAgente, ):
+  def __init__(self, Solver, BD, Pilha, InfoDoAgente):
     self.bd = BD
     self.p = Pilha # Busca em profundidade
-    self.desempenho = desempenho
-    self.orientacao = orientacao
+    self.info = InfoDoAgente
+    self.s = Solver
 
   def Atuar(self, acao):
     if acao == "saindo_da_caverna":
       if self.sairDaCaverna(self): 
         print("saiu da caverna")
-        self.status_agente = "fim"
+        self.info.status = "fim"
         self.bd.inserirAcao("sair_da_caverna")
       else: 
         self.caminharParaSaida(self)      
@@ -30,8 +30,8 @@ class Atuador():
     
   @staticmethod
   def sairDaCaverna(self):
-    if self.linha == 0 and self.coluna == 0:
-      self.desempenho -= 1
+    if self.info.posicaoAtual() == (0, 0):
+      self.info.desempenho -= 1
       return True
     else: return False
   
@@ -39,38 +39,37 @@ class Atuador():
   def caminharParaSaida(self):
     try:
       self.p.pop() # Posição atual
-      ultima_posicao = self.p.pop()
+      ultima_posicao = self.p.ultPosicao()
       linha = ultima_posicao[0]
       coluna = ultima_posicao[1]
 
-      if linha < self.linha: self.girarParaOrientacao(self, 90)
-      elif linha > self.linha: self.girarParaOrientacao(self, 270)
-      elif coluna < self.coluna: self.girarParaOrientacao(self, 180)
-      elif coluna > self.coluna: self.girarParaOrientacao(self, 0)
+      if linha < self.info.linha: self.girarParaOrientacao(self, 90)
+      elif linha > self.info.linha: self.girarParaOrientacao(self, 270)
+      elif coluna < self.info.coluna: self.girarParaOrientacao(self, 180)
+      elif coluna > self.info.coluna: self.girarParaOrientacao(self, 0)
 
       self.avancar(self)
     except: 
       print("saiu da caverna")
-      self.status_agente = "fim"
-      self.p = []
+      self.info.status_agente = "fim"
 
   @staticmethod
   def pegarOuro(self):
-    self.solver.adicionarRegra(f"{self.linha}_{self.coluna}_ouro_pego")
-    self.desempenho += 1000
+    self.s.adicionarRegra(f"{self.info.linha}_{self.info.coluna}_ouro_pego")
+    self.info.desempenho += 1000
   
   @staticmethod
   def avancar(self):
-    if self.orientacao == 0: self.coluna += 1
-    elif self.orientacao == 90: self.linha -= 1
-    elif self.orientacao == 180: self.coluna -= 1
-    elif self.orientacao == 270: self.linha += 1
+    if self.info.orientacao == 0: self.info.coluna += 1
+    elif self.info.orientacao == 90: self.info.linha -= 1
+    elif self.info.orientacao == 180: self.info.coluna -= 1
+    elif self.info.orientacao == 270: self.info.linha += 1
 
-    self.desempenho -= 1
+    self.info.desempenho -= 1
 
   @staticmethod
   def girarParaOrientacao(self, orientacao):
-    diferenca = orientacao - self.orientacao
+    diferenca = orientacao - self.info.orientacao
 
     if diferenca == 0: pass
     elif diferenca == 90: 
@@ -90,20 +89,10 @@ class Atuador():
 
   @staticmethod
   def girarParaEsquerda(self):
-    self.incrementarOrientacao(self)
-    self.desempenho -= 1
+    self.info.incrementarOrientacao()
+    self.info.desempenho -= 1
   
   @staticmethod
   def girarParaDireita(self):
-    self.decrementarOrientacao(self)
-    self.desempenho -= 1
-  
-  @staticmethod
-  def incrementarOrientacao(self):
-    self.orientacao += 90
-    if self.orientacao == 360: self.orientacao = 0
-  
-  @staticmethod
-  def decrementarOrientacao(self):
-    self.orientacao -= 90
-    if self.orientacao == -90: self.orientacao = 270
+    self.info.decrementarOrientacao()
+    self.info.desempenho -= 1

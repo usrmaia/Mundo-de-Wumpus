@@ -4,9 +4,6 @@ from elementos_do_mapa import ElementosDoMapa # !pip install tabulate
 from gerador_de_mapa import GeradorDeMapa
 
 class Mapa():
-    """ O mapa é composto por wumpus (monstros mortais), poços (mortais) e
-    ouro (objetivo), além disso, fedor (indica a presença de wumpus),
-    brisa (indica a presença de poço) e brilho (indica a prensença de ouro) """  
     def __init__(self, PreferenciasDeMapa):
         self.linhas = PreferenciasDeMapa.linhas
         self.colunas = PreferenciasDeMapa.colunas

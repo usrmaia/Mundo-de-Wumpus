@@ -3,15 +3,16 @@ from mapa import Mapa
 from bd import BD
 from solver import Solver
 from agente import Agente
-from util import InfoDoAgente, Pilha, PreferenciasDeMapa
+from util import Pilha, PreferenciasDeMapa
 
 class MundoDeWumpus():
   def __init__(self, PreferenciasDeMapa, BD):
     self.mapa = Mapa(PreferenciasDeMapa)
     self.bd = BD
     self.s = Solver(PreferenciasDeMapa.tamanho(), self.bd)
-    self.agente = Agente(self.s, self.bd)
     self.p = Pilha() # Busca em profundidade
+    self.agente = Agente(self.s, self.bd)
+    self.atuador = Atuador(self.s, self.bd, self.p, self.agente.info)
   
   def resolverMundoDeWumpus(self):
     info = self.agente.retornarInformacoesDoAgente()
@@ -31,7 +32,7 @@ class MundoDeWumpus():
       print(f"ação: {acao}")
       print(f"pilha_de_exploracao: {self.p.get()}")
 
-      self.agente.Atuar(acao)
+      self.atuador.Atuar(acao)
 
       self.validarVida(self, percepcao)
   
