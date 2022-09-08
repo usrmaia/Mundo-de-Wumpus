@@ -1,38 +1,47 @@
+from email.policy import default
 from random import choice
+from colorama import Fore, init, deinit 
+from tabulate import tabulate
+from util import InfoDoAgente, Pilha
 
 class Agente():
-  def __init__(self, solver, base_de_conhecimento):
-    self.solver = solver
-    self.base_de_conhecimento = base_de_conhecimento
-    self.linha = 0
-    self.coluna = 0
-    self.max_linha = 0
-    self.max_coluna = 0
-    self.orientacao = 0
-    self.posicoes = []
-    self.desempenho = 0
-    self.status_agente = "explorando"
-    self.pilha_de_exploracao = []
+  def __init__(self, s, BD):
+    self.s = s
+    self.bd = BD
+    self.info = InfoDoAgente()
+    self.p = Pilha()
     self.proxima_direcao = []
 
-  def definirDesempenho(self, desempenho):
-    self.desempenho = desempenho
+  def retornarInformacoesDoAgente(self): return self.info
+  def atualizarPilha(self, Pilha): self.p = Pilha
   
-  def definirPilhaDeExploracao(self, pilha_de_exploracao):
-    self.pilha_de_exploracao = pilha_de_exploracao
-  
-  def definirLinhaColuna(self, linha, coluna):
-    self.linha = linha
-    self.coluna = coluna
-  
-  def definirOrientacao(self, orientacao):
-    self.orientacao = orientacao
-  
+  # TODO fazer objeto percepcao
   def Agente(self, percepcao):
     self.inferir(self, percepcao)
-    self.criarNovoConhecimento(self)
     acao = self.escolherAcao(self)
     return acao
+  
+  def Atuar(self, acao):
+    if acao == "saindo_da_caverna":
+      if self.sairDaCaverna(self): 
+        print("saiu da caverna")
+        self.bd.inserirAcao("sair_da_caverna")
+      else: 
+        self.caminharParaSaida(self)
+    elif acao == "pegar_ouro": 
+      self.pegarOuro(self)
+    elif acao == "frente": 
+      self.avancar(self)
+    elif acao == "esquerda": 
+      self.girarParaEsquerda(self)
+      self.bd.inserirAcao("avancar")
+      self.avancar(self)
+    elif acao == "direita":
+      self.girarParaDireita(self)
+      self.bd.inserirAcao("avancar")
+      self.avancar(self)
+    else: 
+      self.caminharParaSaida(self)
   
   @staticmethod
   def inferir(self, percepcao):
@@ -40,173 +49,219 @@ class Agente():
     brisa = percepcao[1][1]
     brilho = percepcao[1][2]
     impacto = percepcao[1][3]
-    # grito = self.percepcao[1][4]
 
-    if fedor == 1: self.solver.possui1Fedor(self.linha, self.coluna)
-    elif fedor == 2: self.solver.possui2Fedor(self.linha, self.coluna)
-    elif fedor == 3: self.solver.possui3Fedor(self.linha, self.coluna)
-    else: self.solver.naoPossuiFedor(self.linha, self.coluna)
+    match fedor:
+      case 0: self.s.naoPossuiFedor(self.info.linha, self.info.coluna)
+      case 1: self.s.possui1Fedor(self.info.linha, self.info.coluna)
+      case 2: self.s.possui2Fedor(self.info.linha, self.info.coluna)
+      case 3: self.s.possui3Fedor(self.info.linha, self.info.coluna)
+    
+    match brisa:
+      case 0: self.s.naoPossuiBrisa(self.info.linha, self.info.coluna)
+      case 1: self.s.possui1Brisa(self.info.linha, self.info.coluna)
+      case 2: self.s.possui2Brisa(self.info.linha, self.info.coluna)
+      case 3: self.s.possui3Brisa(self.info.linha, self.info.coluna)
+    
+    match impacto:
+      case 1: self.s.possui1Impacto(self.info.linha, self.info.coluna)
+      case 2: self.s.possui2Impacto(self.info.linha, self.info.coluna)
+      case _: self.s.naoPossuiImpacto(self.info.linha, self.info.coluna)
+    
+    match brilho:
+      case 0: self.s.naoPossuiBrilho(self.info.linha, self.info.coluna)
+      case 1: self.s.possuiBrilho(self.info.linha, self.info.coluna)
 
-    if brisa == 1: self.solver.possui1Brisa(self.linha, self.coluna)
-    elif brisa == 2: self.solver.possui2Brisa(self.linha, self.coluna)
-    elif brisa == 3: self.solver.possui3Brisa(self.linha, self.coluna)
-    else: self.solver.naoPossuiBrisa(self.linha, self.coluna)
-
-    if impacto == 1: self.solver.possui1Impacto(self.linha, self.coluna)
-    elif impacto == 2: self.solver.possui2Impacto(self.linha, self.coluna)
-    else: self.solver.naoPossuiImpacto(self.linha, self.coluna)
-
-    if brilho: self.solver.possuiBrilho(self.linha, self.coluna)
-    else: self.solver.naoPossuiBrilho(self.linha, self.coluna)
-
-    posicao_explorada = f"{self.linha}_{self.coluna}_explorado"
-    self.solver.adicionarRegra(posicao_explorada)
-
-    self.max_linha = max(self.max_linha, self.linha)
-    self.max_coluna = max(self.max_coluna, self.coluna)
-    self.posicoes.append((self.linha, self.coluna))
+    posicao_explorada = f"{self.info.linha}_{self.info.coluna}_explorado"
+    self.s.adicionarRegra(posicao_explorada)  
   
-  @staticmethod
-  def criarNovoConhecimento(self):
-    conhecimento = self.base_de_conhecimento.retornarConhecimento()
-    novo_conhecimento = []
+  def imprimirMapa(self):
+      mapa = []
+      init() # colorama
+      for linha in range(-1, 5):
+        elementos_da_linha = []
+        for coluna in range(-1, 5):
+          elementos_da_celula = ""
 
-    for linha in range(0, self.max_linha + 1):
-      for coluna in range(0, self.max_coluna + 1):
-        # if (linha, coluna) in self.posicoes:
+          if linha == self.info.linha and coluna == self.info.coluna:
+            elementos_da_celula += (Fore.WHITE + f"agente{self.info.orientacao}")
 
-        regra = f"{linha}_{coluna}_wumpus"
-        if self.perguntarRegraComCerteza(self, regra): novo_conhecimento.append(f"{regra}")
-        elif self.perguntarRegraComCerteza(self, f"- {regra}"): novo_conhecimento.append(f"- {regra}")
-        
-        regra = f"{linha}_{coluna}_poco"
-        if self.perguntarRegraComCerteza(self, regra): novo_conhecimento.append(f"{regra}")
-        elif self.perguntarRegraComCerteza(self, f"- {regra}"): novo_conhecimento.append(f"- {regra}")
-
-        regra = f"{linha}_{coluna}_ouro"
-        if self.perguntarRegraComCerteza(self, regra): novo_conhecimento.append(f"{regra}")
-        elif self.perguntarRegraComCerteza(self, f"- {regra}"): novo_conhecimento.append(f"- {regra}")
-
-        regra = f"{linha}_{coluna}_parede"
-        if self.perguntarRegraComCerteza(self, regra): novo_conhecimento.append(f"{regra}")
-        elif self.perguntarRegraComCerteza(self, f"- {regra}"): novo_conhecimento.append(f"- {regra}")
-      
-    for atomo in novo_conhecimento: 
-      if not atomo in conhecimento:
-        self.base_de_conhecimento.inserirConhecimento(atomo)
-        # não adicionar ao solver
+          if self.s.perguntarRegra(f"{linha}_{coluna}_wumpus"):
+            elementos_da_celula += (Fore.GREEN + "wumpus")
+          if self.s.perguntarRegra(f"{linha}_{coluna}_poco"):
+            elementos_da_celula += (Fore.RED + "poco")
+          if self.s.perguntarRegra(f"{linha}_{coluna}_ouro"):
+            elementos_da_celula += (Fore.YELLOW + "ouro")
+          if self.s.perguntarRegra(f"{linha}_{coluna}_parede"):
+            elementos_da_celula += (Fore.MAGENTA + "parede")
+          if self.s.perguntarRegra(f"{linha}_{coluna}_fedor"):
+            elementos_da_celula += (Fore.GREEN + "fedor")
+          if self.s.perguntarRegra(f"{linha}_{coluna}_brisa"):
+            elementos_da_celula += (Fore.RED + "brisa")
+          if self.s.perguntarRegra(f"{linha}_{coluna}_brilho"):
+            elementos_da_celula += (Fore.YELLOW + "brilho")
+          if self.s.perguntarRegra(f"{linha}_{coluna}_impacto"):
+            elementos_da_celula += (Fore.MAGENTA + "impacto")
+          
+          if elementos_da_celula == "": elementos_da_celula += (Fore.WHITE + "ok") 
+          
+          elementos_da_linha.append(elementos_da_celula)
+        mapa.append(elementos_da_linha)
+      deinit() # colorama
+      print(tabulate(mapa, tablefmt="plain", stralign="center"))
+      print(Fore.WHITE) # bug - remover fará com que todas os outputs fiquem coloridos
   
   @staticmethod
   def escolherAcao(self):
-    explorar = self.explorar(self)
+    explorar = self.podeExplorar(self)
 
-    if self.perguntarSairDaCaverna(self): return "saindo_da_caverna"
-    elif self.perguntarOuro(self): return "pegar_ouro"
+    if self.podeSairDaCaverna(self): return "saindo_da_caverna"
+    elif self.temOuro(self): return "pegar_ouro"
     elif explorar: return explorar
     else: return "retornar"
   
   @staticmethod
-  def perguntarSairDaCaverna(self): 
-    if self.desempenho > 0: return True
-    elif self.desempenho < 0 and len(self.pilha_de_exploracao) == 1 and not self.proxima_direcao: return True
+  def podeSairDaCaverna(self): 
+    if self.info.desempenho > 0: return True
+    elif self.info.desempenho < 0 and self.p.len() == 1 \
+      and not self.proxima_direcao: return True
     else: return False
 
   @staticmethod
-  def perguntarOuro(self):
-    ouro = self.solver.perguntarRegra(f"{self.linha}_{self.coluna}_ouro")
-    pego = f"{self.linha}_{self.coluna}_ouro_pego"
-    pego = self.perguntarRegraComCerteza(self, pego)
+  def temOuro(self):
+    regra_tem_ouro = f"{self.info.linha}_{self.info.coluna}_ouro"
+    ouro = self.s.perguntarRegraComCerteza(regra_tem_ouro)
+    regra_foi_pego = f"{self.info.linha}_{self.info.coluna}_ouro_pego"
+    pego = self.s.perguntarRegraComCerteza(regra_foi_pego)
+    
     if ouro and not pego: return True
     else: return False
   
   @staticmethod
-  def explorar(self):
-    # Definir direções
-    busca = {
-        # direcao: (pode_avancar, foi_explorado)
-        "frente": (False, True),
-        "esquerda": (False, True),
-        "atras": (False, True),
-        "direita": (False, True)        
+  def podeExplorar(self):
+    status_adjacentes = self.retornarStatusAdjacentes(self)
+    # print(status_adjacentes)
+    proxima_direcao = self.retornarProximaDirecao(self, status_adjacentes)
+    return proxima_direcao
+    
+  @staticmethod
+  def retornarStatusAdjacentes(self):
+    status_adjacentes = {
+      # direcao: (pode_avancar, foi_explorado)
     }
 
     for direcao in ["frente", "esquerda", "atras", "direita"]:
       pode_avancar = False
       foi_explorado = True
 
-      if self.peguntarAvancar(self): pode_avancar = True
-      if not self.peguntarExplorado(self): foi_explorado = False
+      if self.podeAvancar(self): pode_avancar = True
+
+      linha, coluna = self.info.posicaoAFrente()
+      if not self.foiExplorado(self, linha, coluna): foi_explorado = False
       
-      busca[direcao] = (pode_avancar, foi_explorado)
-      self.incrementarOrientacao(self)
+      status_adjacentes[direcao] = (pode_avancar, foi_explorado)
+      self.info.incrementarOrientacao()
 
-    print(busca)
+    return status_adjacentes
 
-    # Decidir para onde vai 
+  @staticmethod
+  def retornarProximaDirecao(self, status_adjacentes):
     proxima_direcao = [] # Prioridade: (True, False)
-    for direcao in ["frente", "esquerda", "direita"]:
-      if busca[direcao] == (True, False):
+    
+    for direcao in ["frente", "esquerda", "atras", "direita"]:
+      if status_adjacentes[direcao] == (True, False):
         proxima_direcao.append(direcao) 
     
-    self.proxima_direcao = proxima_direcao # perguntarSairDaCaverna
+    self.proxima_direcao = proxima_direcao # usado em podeSairDaCaverna()
 
-    if proxima_direcao: 
-      proxima_direcao = choice(proxima_direcao)
-      return proxima_direcao
-    else: return False
+    if proxima_direcao: return choice(proxima_direcao)
+    return []
 
   @staticmethod
-  def perguntarRegraComCerteza(self, regra):
-    # Verdadeira apenas se houver certeza
-    if "-" in regra:
-      regra = self.solver.perguntarRegra(f"{regra}") and not self.solver.perguntarRegra(f"{regra[2:]}")
-      if regra: return True
-      else: return False
-    else:
-      regra = self.solver.perguntarRegra(f"{regra}") and not self.solver.perguntarRegra(f"- {regra}")
-      if regra: return True
-      else: return False
-
-  @staticmethod
-  def peguntarAvancar(self):
-    linha, coluna = self.posicaoAFrente(self)
+  def podeAvancar(self):
+    linha, coluna = self.info.posicaoAFrente()
 
     try:
-      wumpus = self.solver.perguntarRegra(f"{linha}_{coluna}_wumpus")
-      poco = self.solver.perguntarRegra(f"{linha}_{coluna}_poco")
-      parede = self.solver.perguntarRegra(f"{linha}_{coluna}_parede")
+      wumpus = self.s.perguntarRegra(f"{linha}_{coluna}_wumpus")
+      poco = self.s.perguntarRegra(f"{linha}_{coluna}_poco")
+      parede = self.s.perguntarRegra(f"{linha}_{coluna}_parede")
 
       return not (wumpus or poco or parede)
     except: return False
   
   @staticmethod
-  def peguntarExplorado(self):
-    linha, coluna = self.posicaoAFrente(self)
-    explorado = not (self.solver.perguntarRegra(f"{linha}_{coluna}_explorado") and self.solver.perguntarRegra(f"- {linha}_{coluna}_explorado"))
+  def foiExplorado(self, linha, coluna):
+    regra = f"{linha}_{coluna}_explorado"
+    explorado = self.s.perguntarRegraComCerteza(regra)
+    # explorado = not (self.s.perguntarRegra(f"{linha}_{coluna}_explorado") and self.s.perguntarRegra(f"- {linha}_{coluna}_explorado"))
     return explorado
-    try: 
-      if self.solver.perguntarRegra(f"{linha}_{coluna}_explorado"):
-        if self.solver.perguntarRegra(f"- {linha}_{coluna}_explorado"): return False
-        else: return True
-      else: return False
-    except: return False
-
-  @staticmethod
-  def posicaoAFrente(self):
-    linha = self.linha
-    coluna = self.coluna
-    if self.orientacao == 0: coluna += 1
-    elif self.orientacao == 90: linha -= 1
-    elif self.orientacao == 180: coluna -= 1
-    elif self.orientacao == 270: linha += 1
-    return linha, coluna
-
-  @staticmethod
-  def incrementarOrientacao(self):
-    self.orientacao += 90
-    if self.orientacao == 360: self.orientacao = 0
+  
+  # Ações
   
   @staticmethod
-  def decrementarOrientacao(self):
-    self.orientacao -= 90
-    if self.orientacao == -90: self.orientacao = 270
+  def sairDaCaverna(self):
+    if self.info.posicaoAtual() == (0, 0):
+      self.info.desempenho -= 1
+      return True
+    else: return False
+  
+  @staticmethod
+  def caminharParaSaida(self):
+    try:
+      self.p.pop() # Posição atual
+      ultima_posicao = self.p.ultPosicao()
+      linha = ultima_posicao[0]
+      coluna = ultima_posicao[1]
+
+      if linha < self.info.linha: self.girarParaOrientacao(self, 90)
+      elif linha > self.info.linha: self.girarParaOrientacao(self, 270)
+      elif coluna < self.info.coluna: self.girarParaOrientacao(self, 180)
+      elif coluna > self.info.coluna: self.girarParaOrientacao(self, 0)
+
+      self.avancar(self)
+    except: 
+      print("saiu da caverna")
+      self.info.status_agente = "fim"
+
+  @staticmethod
+  def pegarOuro(self):
+    self.s.adicionarRegra(f"{self.info.linha}_{self.info.coluna}_ouro_pego")
+    self.info.desempenho += 1000
+  
+  @staticmethod
+  def avancar(self):
+    if self.info.orientacao == 0: self.info.coluna += 1
+    elif self.info.orientacao == 90: self.info.linha -= 1
+    elif self.info.orientacao == 180: self.info.coluna -= 1
+    elif self.info.orientacao == 270: self.info.linha += 1
+
+    self.info.desempenho -= 1
+
+  @staticmethod
+  def girarParaOrientacao(self, orientacao):
+    diferenca = orientacao - self.info.orientacao
+
+    if diferenca == 0: pass
+    elif diferenca == 90: 
+      self.girarParaEsquerda(self)
+    elif diferenca == -90: 
+      self.girarParaDireita(self)
+    elif diferenca == 180:
+      self.girarParaEsquerda(self)
+      self.girarParaEsquerda(self)
+    elif diferenca == -180:
+      self.girarParaEsquerda(self)
+      self.girarParaEsquerda(self)
+    elif diferenca == 270:
+      self.girarParaDireita(self)
+    elif diferenca == -270:
+      self.girarParaEsquerda(self)
+
+  @staticmethod
+  def girarParaEsquerda(self):
+    self.info.incrementarOrientacao()
+    self.info.desempenho -= 1
+  
+  @staticmethod
+  def girarParaDireita(self):
+    self.info.decrementarOrientacao()
+    self.info.desempenho -= 1

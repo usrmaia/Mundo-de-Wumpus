@@ -1,10 +1,10 @@
 from pysat.solvers import Glucose3 #!pip install python-sat
 
 class Solver():
-  def __init__(self, linhas, colunas, bd):
+  def __init__(self, tamanho_do_mapa, bd):
     self.glucose = Glucose3()
-    self.linhas = linhas
-    self.colunas = colunas
+    self.linhas = tamanho_do_mapa[0]
+    self.colunas = tamanho_do_mapa[1]
     self.bd = bd
     self.mapeamento = {}
     self.mapeamento_reverso = {}
@@ -32,6 +32,20 @@ class Solver():
     if self.glucose.solve(assumptions=[regra]): 
       return True
     return False
+  
+  def perguntarRegraComCerteza(self, regra):
+    # Igual perguntarRegra(), porém retorna False por vacuidade
+    if "-" in regra:
+      regra_n = self.perguntarRegra(f"{regra}") 
+      regra = self.perguntarRegra(f"{regra[2:]}")
+      regra = regra_n and not regra 
+    else:
+      regra_n = self.perguntarRegra(f"- {regra}")
+      regra = self.perguntarRegra(f"{regra}")
+      regra = regra and not regra_n
+
+    if regra: return True
+    else: return False
 
   def adicionarRegra(self, regra):
     self.mapeamento[f"{regra}"] = self.index
@@ -173,17 +187,24 @@ class Solver():
     
     self.glucose.add_clause([self.mapeamento[f"-1_0_parede"]])
     self.glucose.add_clause([self.mapeamento[f"0_-1_parede"]])
-  
+
+    # Remédio para o bug, agente acha que existe paredes internar
+    # Não há parede internas
+    for linha in range(0, self.linhas - 1):
+      for coluna in range(0, self.colunas - 1): 
+        self.mapearInstancia(self, linha, coluna, "parede")
+        self.glucose.add_clause([self.mapeamento[f"- {linha}_{coluna}_parede"]])
+    
   @staticmethod
   def mapearInstancia(self, linha, coluna, objeto):
     try: self.mapeamento[f"{linha}_{coluna}_{objeto}"]
     except:
-        self.mapeamento[f"{linha}_{coluna}_{objeto}"] = self.index
-        self.mapeamento[f"- {linha}_{coluna}_{objeto}"] = -self.index
-        self.mapeamento_reverso[self.index] = f"{linha}_{coluna}_{objeto}"
-        self.mapeamento_reverso[-self.index] = f"- {linha}_{coluna}_{objeto}"
+      self.mapeamento[f"{linha}_{coluna}_{objeto}"] = self.index
+      self.mapeamento[f"- {linha}_{coluna}_{objeto}"] = -self.index
+      self.mapeamento_reverso[self.index] = f"{linha}_{coluna}_{objeto}"
+      self.mapeamento_reverso[-self.index] = f"- {linha}_{coluna}_{objeto}"
 
-        self.index += 1
+      self.index += 1
 
   @staticmethod
   def mapear(self):
@@ -212,6 +233,14 @@ class Solver():
     for linha in range(-1, self.linhas + 1):
       for coluna in [-1, self.colunas]:
         self.mapearInstancia(self, linha, coluna, "parede")
+    
+    self.mapeamento[f"verdade"] = self.index
+    self.mapeamento_reverso[self.index] = f"verdade"
+
+    self.glucose.add_clause([self.index])
+
+    self.mapeamento[f"falso"] = -self.index
+    self.mapeamento_reverso[-self.index] = f"falso"
 
   def imprimirMapeamento(self):
     print("mapeamento[posição] -> index")

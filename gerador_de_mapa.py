@@ -2,12 +2,12 @@ from random import random
 from elementos_do_mapa import ElementosDoMapa
 
 class GeradorDeMapa():
-    def __init__(self, linhas, colunas, quantidade_wumpus, quantidade_pocos, quantidade_ouros):
-        self.linhas = linhas
-        self.colunas = colunas
-        self.quantidade_wumpus = quantidade_wumpus
-        self.quantidade_pocos = quantidade_pocos
-        self.quantidade_ouros = quantidade_ouros
+    def __init__(self, PreferenciasDeMapa):
+        self.linhas = PreferenciasDeMapa.linhas
+        self.colunas = PreferenciasDeMapa.colunas
+        self.quantidade_wumpus = PreferenciasDeMapa.qtd_wumpus
+        self.quantidade_pocos = PreferenciasDeMapa.qtd_pocos
+        self.quantidade_ouros = PreferenciasDeMapa.qtd_ouros
         self.taxa_wumpus = self.quantidade_wumpus / (self.linhas * self.colunas - 1 - self.quantidade_pocos - self.quantidade_ouros)
         self.taxa_pocos = self.quantidade_pocos / (self.linhas * self.colunas - 1 - self.quantidade_wumpus - self.quantidade_ouros)
         self.taxa_ouros = self.quantidade_ouros / (self.linhas * self.colunas - 1 - self.quantidade_wumpus - self.quantidade_pocos)

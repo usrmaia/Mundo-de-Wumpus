@@ -7,14 +7,16 @@ class Mapa():
     """ O mapa é composto por wumpus (monstros mortais), poços (mortais) e
     ouro (objetivo), além disso, fedor (indica a presença de wumpus),
     brisa (indica a presença de poço) e brilho (indica a prensença de ouro) """  
-    def __init__(self, linhas, colunas, quantidade_wumpus, quantidade_pocos, quantidade_ouros):
-        self.linhas = linhas
-        self.colunas = colunas
-        self.gerador_de_mapa = GeradorDeMapa(linhas, colunas, quantidade_wumpus, quantidade_pocos, quantidade_ouros)
+    def __init__(self, PreferenciasDeMapa):
+        self.linhas = PreferenciasDeMapa.linhas
+        self.colunas = PreferenciasDeMapa.colunas
+        self.gerador_de_mapa = GeradorDeMapa(PreferenciasDeMapa)
         self.status_posicao = self.gerador_de_mapa.retornarStatusPosicao()
         self.e_mapa = ElementosDoMapa(self.status_posicao)
     
-    def retornarStatusDaPosica(self, linha, coluna):
+    def retornarStatusDaPosica(self, posicao):
+        linha = posicao[0]
+        coluna = posicao[1]
         try: return self.status_posicao[f"{linha}_{coluna}_posicao"]
         except:
             print("Posição inválida!")
